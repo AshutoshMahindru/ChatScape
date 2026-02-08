@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as d3 from 'd3'
 import { MindMapCanvasProps, D3Node, D3Edge } from '@/lib/visualization/types'
+import { calculateLayoutPositions } from '@/lib/visualization/layouts'
 
 export default function MindMapCanvas({
   nodes,
@@ -106,19 +107,53 @@ export default function MindMapCanvas({
     const d3Nodes: D3Node[] = filteredNodes.map((node) => ({ ...node }))
     const d3Edges: D3Edge[] = filteredEdges.map((edge) => ({ ...edge }))
 
-    // Initialize force simulation
-    const simulation = d3
-      .forceSimulation<D3Node>(d3Nodes)
-      .force(
-        'link',
-        d3
-          .forceLink<D3Node, D3Edge>(d3Edges)
-          .id((d) => d.id)
-          .distance(100)
-      )
-      .force('charge', d3.forceManyBody().strength(-300))
-      .force('center', d3.forceCenter(width / 2, height / 2))
-      .force('collision', d3.forceCollide().radius(50))
+    // Calculate layout positions
+    const layoutPositions = calculateLayoutPositions(
+      filteredNodes,
+      filteredEdges,
+      layout,
+      width,
+      height
+    )
+
+    // Apply layout positions to nodes
+    d3Nodes.forEach((node) => {
+      const pos = layoutPositions[node.id]
+      if (pos) {
+        if (layout === 'force-directed') {
+          // For force-directed, set initial positions if not already set
+          if (node.x === undefined) node.x = pos.x
+          if (node.y === undefined) node.y = pos.y
+        } else {
+          // For other layouts, fix positions
+          node.x = pos.x
+          node.y = pos.y
+          node.fx = pos.x
+          node.fy = pos.y
+        }
+      }
+    })
+
+    // Initialize force simulation only for force-directed layout
+    let simulation: d3.Simulation<D3Node, D3Edge>
+
+    if (layout === 'force-directed') {
+      simulation = d3
+        .forceSimulation<D3Node>(d3Nodes)
+        .force(
+          'link',
+          d3
+            .forceLink<D3Node, D3Edge>(d3Edges)
+            .id((d) => d.id)
+            .distance(100)
+        )
+        .force('charge', d3.forceManyBody().strength(-300))
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('collision', d3.forceCollide().radius(50))
+    } else {
+      // For static layouts, create simulation without forces
+      simulation = d3.forceSimulation<D3Node>(d3Nodes).stop()
+    }
 
     simulationRef.current = simulation
 
@@ -144,9 +179,11 @@ export default function MindMapCanvas({
       .style('cursor', 'pointer')
       .call(
         d3
-          .drag<SVGGElement, D3Node>()
+          .drag<any, D3Node>()
           .on('start', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0.3).restart()
+            if (layout === 'force-directed') {
+              if (!event.active) simulation.alphaTarget(0.3).restart()
+            }
             d.fx = d.x
             d.fy = d.y
           })
@@ -155,7 +192,9 @@ export default function MindMapCanvas({
             d.fy = event.y
           })
           .on('end', (event, d) => {
-            if (!event.active) simulation.alphaTarget(0)
+            if (layout === 'force-directed') {
+              if (!event.active) simulation.alphaTarget(0)
+            }
             // Keep node pinned
           })
       )
@@ -246,16 +285,45 @@ export default function MindMapCanvas({
         }
       })
 
-    // Update positions on simulation tick
-    simulation.on('tick', () => {
-      link
-        .attr('x1', (d: any) => d.source.x)
-        .attr('y1', (d: any) => d.source.y)
-        .attr('x2', (d: any) => d.target.x)
-        .attr('y2', (d: any) => d.target.y)
+    // Update positions based on layout type
+    if (layout === 'force-directed') {
+      // For force-directed, update on simulation tick
+      simulation.on('tick', () => {
+        link
+          .attr('x1', (d: any) => d.source.x)
+          .attr('y1', (d: any) => d.source.y)
+          .attr('x2', (d: any) => d.target.x)
+          .attr('y2', (d: any) => d.target.y)
 
-      node.attr('transform', (d) => `translate(${d.x},${d.y})`)
-    })
+        node.attr('transform', (d) => `translate(${d.x},${d.y})`)
+      })
+    } else {
+      // For static layouts, animate transition to positions
+      node
+        .transition()
+        .duration(1000)
+        .attr('transform', (d) => `translate(${d.x},${d.y})`)
+
+      link
+        .transition()
+        .duration(1000)
+        .attr('x1', (d: any) => {
+          const sourceNode = d3Nodes.find((n) => n.id === d.source.id || n.id === d.source)
+          return sourceNode?.x || 0
+        })
+        .attr('y1', (d: any) => {
+          const sourceNode = d3Nodes.find((n) => n.id === d.source.id || n.id === d.source)
+          return sourceNode?.y || 0
+        })
+        .attr('x2', (d: any) => {
+          const targetNode = d3Nodes.find((n) => n.id === d.target.id || n.id === d.target)
+          return targetNode?.x || 0
+        })
+        .attr('y2', (d: any) => {
+          const targetNode = d3Nodes.find((n) => n.id === d.target.id || n.id === d.target)
+          return targetNode?.y || 0
+        })
+    }
 
     // Cleanup
     return () => {
