@@ -1,11 +1,13 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useFileImport } from '@/hooks/useFileImport'
 import FileUploadZone from './FileUploadZone'
 import ConversationPreview from './ConversationPreview'
 import ConversationList from './ConversationList'
 
 export default function ImportFlow() {
+  const router = useRouter()
   const {
     state,
     parsedConversation,
@@ -16,6 +18,10 @@ export default function ImportFlow() {
     handleCancel,
     handleReset,
   } = useFileImport()
+
+  const handleConversationSelect = (conversationId: string) => {
+    router.push(`/conversations/${conversationId}`)
+  }
 
   return (
     <div className="space-y-8">
@@ -98,7 +104,10 @@ export default function ImportFlow() {
       {/* Conversation List */}
       {(state === 'idle' || state === 'success') && (
         <div className="bg-white rounded-lg shadow-sm p-8">
-          <ConversationList showUploadPrompt={state === 'idle'} />
+          <ConversationList
+            showUploadPrompt={state === 'idle'}
+            onSelect={handleConversationSelect}
+          />
         </div>
       )}
     </div>
