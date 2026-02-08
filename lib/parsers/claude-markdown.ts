@@ -11,12 +11,23 @@ export function parseClaudeMarkdown(content: string, filename?: string): ParsedC
       title = filename.replace(/\.(md|txt)$/i, '')
     }
 
-    // Split by message markers (Human: or Assistant: or # Human or # Assistant)
+    // Split by message markers - support various formats
     const messageMarkers = [
-      /^#{1,3}\s*Human:?\s*$/gim,
-      /^#{1,3}\s*Assistant:?\s*$/gim,
-      /^Human:?\s*$/gim,
-      /^Assistant:?\s*$/gim,
+      // Headers: # Human, ## Assistant, etc.
+      /^#{1,3}\s*(Human|User):?\s*$/gim,
+      /^#{1,3}\s*(Assistant|AI|Claude|GPT):?\s*$/gim,
+
+      // Bold: **Human:**, **User:**
+      /^\*\*\s*(Human|User):?\s*\*\*\s*$/gim,
+      /^\*\*\s*(Assistant|AI|Claude|GPT):?\s*\*\*\s*$/gim,
+
+      // Plain: Human:, User:, AI:
+      /^(Human|User):?\s*$/gim,
+      /^(Assistant|AI|Claude|GPT):?\s*$/gim,
+
+      // With dashes: --- Human ---
+      /^-+\s*(Human|User)\s*-+$/gim,
+      /^-+\s*(Assistant|AI|Claude|GPT)\s*-+$/gim,
     ]
 
     // Find all marker positions
@@ -27,7 +38,8 @@ export function parseClaudeMarkdown(content: string, filename?: string): ParsedC
       const regex = new RegExp(pattern.source, pattern.flags)
       while ((match = regex.exec(content)) !== null) {
         const matchText = match[0].toLowerCase()
-        const role = matchText.includes('human') || matchText.includes('user') ? 'user' : 'assistant'
+        const isUser = matchText.includes('human') || matchText.includes('user')
+        const role = isUser ? 'user' : 'assistant'
         markers.push({ index: match.index, role })
       }
     }
@@ -52,8 +64,13 @@ export function parseClaudeMarkdown(content: string, filename?: string): ParsedC
       // Extract content between this marker and the next
       let messageContent = content.substring(start, end)
 
-      // Remove the marker itself from the content
-      messageContent = messageContent.replace(/^#{1,3}\s*(Human|Assistant):?\s*/i, '').trim()
+      // Remove the marker itself from the content (handle all patterns)
+      messageContent = messageContent
+        .replace(/^#{1,3}\s*(Human|User|Assistant|AI|Claude|GPT):?\s*/i, '')
+        .replace(/^\*\*\s*(Human|User|Assistant|AI|Claude|GPT):?\s*\*\*\s*/i, '')
+        .replace(/^(Human|User|Assistant|AI|Claude|GPT):?\s*/i, '')
+        .replace(/^-+\s*(Human|User|Assistant|AI|Claude|GPT)\s*-+/i, '')
+        .trim()
 
       if (messageContent) {
         messages.push({
