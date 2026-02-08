@@ -4,6 +4,7 @@ import { parseChatGptHtml } from './chatgpt-html'
 import { parseClaudeJson } from './claude-json'
 import { parseClaudeMarkdown } from './claude-markdown'
 import { parseGenericJson } from './generic-json'
+import { parseGenericMarkdown } from './generic-markdown'
 
 export function detectFormat(content: string, filename: string): Parser {
   // First, try to detect if it's JSON
@@ -52,12 +53,31 @@ export function detectFormat(content: string, filename: string): Parser {
   }
 
   if (lowerFilename.endsWith('.md') || lowerFilename.endsWith('.markdown')) {
-    return parseClaudeMarkdown
+    // Check if it has conversation markers
+    const hasConversationMarkers = /^(#{1,3}\s*)?(Human|User|Assistant|AI|Claude|GPT):?\s*$/im.test(content) ||
+                                   /^\*\*\s*(Human|User|Assistant|AI):?\s*\*\*\s*$/im.test(content) ||
+                                   /^-+\s*(Human|User|Assistant|AI)\s*-+$/im.test(content)
+
+    if (hasConversationMarkers) {
+      return parseClaudeMarkdown
+    } else {
+      // Treat as documentation/report
+      return parseGenericMarkdown
+    }
   }
 
   if (lowerFilename.endsWith('.txt')) {
-    // Text files are most likely Claude markdown format
-    return parseClaudeMarkdown
+    // Check if it has conversation markers
+    const hasConversationMarkers = /^(#{1,3}\s*)?(Human|User|Assistant|AI|Claude|GPT):?\s*$/im.test(content) ||
+                                   /^\*\*\s*(Human|User|Assistant|AI):?\s*\*\*\s*$/im.test(content) ||
+                                   /^-+\s*(Human|User|Assistant|AI)\s*-+$/im.test(content)
+
+    if (hasConversationMarkers) {
+      return parseClaudeMarkdown
+    } else {
+      // Treat as documentation/report
+      return parseGenericMarkdown
+    }
   }
 
   // No format detected
