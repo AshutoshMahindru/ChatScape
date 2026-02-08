@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import SignOutButton from '@/components/auth/SignOutButton'
+import ImportFlow from '@/components/upload/ImportFlow'
 
 export default async function DashboardPage() {
   const supabase = createClient()
@@ -38,31 +39,8 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Placeholder Content */}
-        <div className="bg-white rounded-lg shadow-sm p-8">
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🗺️</div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-              Your Chat Maps
-            </h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Your chat maps will appear here once you import conversations.
-              Start exploring your LLM chat histories in a whole new way!
-            </p>
-          </div>
-        </div>
-
-        {/* Debug Info (shows database connectivity works) */}
-        {profile && (
-          <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <p className="text-sm text-blue-800">
-              ✅ Database Connected - Profile loaded successfully
-            </p>
-            <p className="text-xs text-blue-600 mt-1">
-              User ID: {profile.id}
-            </p>
-          </div>
-        )}
+        {/* Import Flow */}
+        <ImportFlow />
       </div>
     </main>
   )
