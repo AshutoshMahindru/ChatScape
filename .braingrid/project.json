@@ -1,0 +1,14 @@
+{
+  "organization_id": "default",
+  "project_id": "c8e189a7-ce3b-4eeb-9e28-ce6f716b7774",
+  "project_short_id": "PROJ-7",
+  "project_name": "Llmchatmap",
+  "project_description": "LlmChatMap",
+  "repository": {
+    "id": "5e14f6c7-c274-4c1b-8c40-5f0fa3fe3504",
+    "owner": "AshutoshMahindru",
+    "name": "ChatScape",
+    "full_name": "AshutoshMahindru/ChatScape"
+  },
+  "created_at": "2026-02-07T21:10:50.464Z"
+}
